@@ -17,6 +17,8 @@ from abc import ABC, abstractmethod
 from typing import Tuple
 import numpy as np
 import gymnasium as gym
+import math
+from math import *
 
 
 class FeatureExtractor(ABC):
@@ -58,7 +60,19 @@ class FeatureExtractor(ABC):
         This helper clamps out-of-bounds values to the [0,1] interval which
         is useful for grid-based or RBF centers defined in normalized space.
         """
-        raise NotImplementedError("Please implement normalize_state as part of the assignment.")
+        position = state[0]
+        velocity = state[1]
+        position = self.normalize(position, self.position_bounds)
+        velocity = self.normalize(velocity, self.velocity_bounds)
+
+        return position, velocity 
+
+    def normalize(self, value, lower_bound, upper_bound):
+        
+        return (value - lower_bound)/(upper_bound - lower_bound)
+
+    def normalize(self, value, bounds):
+        return (value - bounds[0])/(bounds[1] - bounds[0])
 
 
 class RBFFeatureExtractor(FeatureExtractor):
@@ -99,11 +113,31 @@ class RBFFeatureExtractor(FeatureExtractor):
         within the normalized [0,1] coordinates. The first center must be at (0,0) and the last at (1,1).
 
         """
-        raise NotImplementedError("Please implement _create_rbf_centers as part of the assignment.")
+        #raise NotImplementedError("Please implement _create_rbf_centers as part of the assignment.")
+
+        rows = ceil(sqrt(self.n_centers))
+        columns = floor(self.n_centers/rows)
+        resto = self.n_centers - rows*columns
+        self.centers = np.ndarray((self.n_centers, 2))
+        delta_y = 1/(rows - 1)
+        for i in range(rows):
+            delta_x = 1/(columns + (resto>0) - 1)
+            for j in range(columns + (resto>0)):
+                self.centers[(i*rows)+j] = [j*delta_x, i*delta_y]
+            if resto > 0: resto = resto - 1
+
+    def distancia(self, point_a, point_b):
+        return sqrt((point_a[0] - point_b[0])**2 + (point_a[1] - point_b[1])**2)
 
     def extract_features(self, state: np.ndarray) -> np.ndarray:
         """(Student) Compute RBF feature activations for a state.
 
         Returns a 1D numpy array of length `self.n_features`.
-        """
-        raise NotImplementedError("Please implement extract_features as part of the assignment.")
+        """        
+        state = self.normalize_state(state)
+        features = np.ndarray((self.n_features, 1))
+        for i in range(self.n_features):
+            features[i] = exp(-(self.distancia(self.centers[i], state)**2)/(2*(self.sigma**2)))
+
+
+        #raise NotImplementedError("Please implement extract_features as part of the assignment.")
