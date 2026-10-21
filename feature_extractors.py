@@ -135,7 +135,7 @@ class RBFFeatureExtractor(FeatureExtractor):
         Returns a 1D numpy array of length `self.n_features`.
         """        
         state = self.normalize_state(state)
-        features = np.ndarray((self.n_features, 1))
+        features = np.ndarray((self.n_features,))
         for i in range(self.n_features):
             features[i] = exp(-(self.distancia(self.centers[i], state)**2)/(2*(self.sigma**2)))
 
