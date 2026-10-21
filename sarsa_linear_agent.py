@@ -102,11 +102,15 @@ class LinearSarsaAgent:
     ) -> None:
         """SARSA weight update 
         """
-        target = reward + self.discount_factor*self.Q(next_state, next_action)
-        error = target - self.Q(state, action)
+        # Estado terminal (chegou ao objetivo): não há valor futuro.
+        if done:
+            target = reward
+        else:
+            target = reward + self.discount_factor*self.Q(next_state, next_action)
         features = self.feature_extractor.extract_features(state)
-        for i in range(self.n_actions):
-            self.weights[i] += self.learning_rate*error*features[i]
+        error = target - np.dot(self.weights[action], features)
+        # Só os pesos da ação executada recebem o gradiente (grad de Q(s,a) = phi(s)).
+        self.weights[action] += self.learning_rate*error*features
 
 
         
@@ -123,7 +127,7 @@ class LinearSarsaAgent:
             self.epsilon = self.epsilon_min 
         #raise NotImplementedError("Implement epsilon decay in decay_epsilon()")
 
-    def train(self, total_steps: int, seed=None) -> Tuple[List[float], List[float]]:
+    def train(self, total_steps: int, seed=None, verbose: bool = True) -> Tuple[List[float], List[float]]:
         """Train the agent for a fixed number of environment steps.
 
         Students should implement a step-based loop that:
@@ -134,32 +138,50 @@ class LinearSarsaAgent:
         Returns two lists: rewards per step and rewards per episode.
         """
 
-        state, _ = self.env.reset(seed)
+        # reset() só aceita seed como argumento nomeado; semeia apenas o 1º episódio
+        # para que os episódios seguintes tenham estados iniciais diferentes.
+        state, _ = self.env.reset(seed=seed)
+        if seed is not None:
+            self.env.action_space.seed(seed)
         steps = 0
+        ep_len = 0
+        # Passo global em que terminou cada episódio que alcançou o objetivo.
+        self.success_steps = []
         action = self.act(state)
         r_per_step = []
         r_per_eps = []
         ep_reward_sum = 0
         while steps < total_steps:
             steps += 1
-            print(f"\rProgresso: {(100*steps)/total_steps}", end="")
+            ep_len += 1
+            if verbose and (steps % 1000 == 0 or steps == total_steps):
+                print(f"\rProgresso: {(100*steps)/total_steps:.0f}%", end="")
             next_state, reward, terminated, truncated, _ = self.env.step(action)
             r_per_step.append(reward)
             ep_reward_sum += reward
             next_action = self.act(next_state)
             done = terminated or truncated
-            self.updateQ(state, action, reward, next_state, next_action, done)
+            # Truncamento (limite de 200 passos) não é terminal: ainda faz bootstrap.
+            self.updateQ(state, action, reward, next_state, next_action, terminated)
 
             if done:
-                next_state, _ = self.env.reset(seed)
+                if terminated:
+                    self.success_steps.append(steps)
+                next_state, _ = self.env.reset(seed=seed)
                 next_action = self.act(next_state)
+                if seed is not None:
+                    self.env.action_space.seed(seed)
                 r_per_eps.append(ep_reward_sum)
+                self.episode_rewards.append(ep_reward_sum)
+                self.episode_lengths.append(ep_len)
                 ep_reward_sum = 0
+                ep_len = 0
                 self.decay_epsilon()
 
             state = next_state
             action = next_action
-        print()
+        if verbose:
+            print()
 
         return r_per_step, r_per_eps
 
