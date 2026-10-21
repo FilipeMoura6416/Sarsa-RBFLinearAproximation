@@ -139,5 +139,7 @@ class RBFFeatureExtractor(FeatureExtractor):
         for i in range(self.n_features):
             features[i] = exp(-(self.distancia(self.centers[i], state)**2)/(2*(self.sigma**2)))
 
+        return features
+
 
         #raise NotImplementedError("Please implement extract_features as part of the assignment.")

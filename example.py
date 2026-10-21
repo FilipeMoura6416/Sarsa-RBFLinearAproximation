@@ -16,6 +16,7 @@ def quick_demo_steps():
     # Create environment
     env = gym.make('MountainCar-v0')
 
+
     # Create feature extractor with simpler settings for quick demo
     feature_extractor = RBFFeatureExtractor(env=env, n_centers=16, sigma=0.2)
 

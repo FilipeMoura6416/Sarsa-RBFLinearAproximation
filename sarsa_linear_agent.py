@@ -84,7 +84,7 @@ class LinearSarsaAgent:
                     candidates.append(action)
             return np.random.choice(candidates)
         else:
-            return self.env.sample_action()
+            return self.env.action_space.sample()
             
 
         #raise NotImplementedError("Implement epsilon-greedy policy in act()")
@@ -100,10 +100,10 @@ class LinearSarsaAgent:
     ) -> None:
         """SARSA weight update 
         """
-        target = reward + self.Q(next_state, next_action)
+        target = reward + self.discount_factor*self.Q(next_state, next_action)
         error = target - self.Q(state, action)
         features = self.feature_extractor.extract_features(state)
-        for i in range(self.feature_extractor.n_features):
+        for i in range(self.n_actions):
             self.weights[i] += self.learning_rate*error*features[i]
 
 
@@ -139,6 +139,8 @@ class LinearSarsaAgent:
         r_per_eps = []
         ep_reward_sum = 0
         while steps < total_steps:
+            steps += 1
+            print(f"\rProgresso: {(100*steps)/total_steps}", end="")
             next_state, reward, terminated, truncated, _ = self.env.step(action)
             r_per_step.append(reward)
             ep_reward_sum += reward
@@ -151,9 +153,13 @@ class LinearSarsaAgent:
                 next_action = self.act(next_state)
                 r_per_eps.append(ep_reward_sum)
                 ep_reward_sum = 0
+                self.decay_epsilon()
 
             state = next_state
             action = next_action
+        print()
+
+        return r_per_step, r_per_eps
 
         
         #raise NotImplementedError("Implement training loop in train()")
