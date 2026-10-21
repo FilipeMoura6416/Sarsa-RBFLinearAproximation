@@ -17,6 +17,8 @@ import numpy as np
 import gymnasium as gym
 import pickle
 from feature_extractors import FeatureExtractor
+NP_SEED = 64
+np.random.seed(NP_SEED)
 
 
 class LinearSarsaAgent:
@@ -121,7 +123,7 @@ class LinearSarsaAgent:
             self.epsilon = self.epsilon_min 
         #raise NotImplementedError("Implement epsilon decay in decay_epsilon()")
 
-    def train(self, total_steps: int) -> Tuple[List[float], List[float]]:
+    def train(self, total_steps: int, seed=None) -> Tuple[List[float], List[float]]:
         """Train the agent for a fixed number of environment steps.
 
         Students should implement a step-based loop that:
@@ -132,7 +134,7 @@ class LinearSarsaAgent:
         Returns two lists: rewards per step and rewards per episode.
         """
 
-        state, _ = self.env.reset()
+        state, _ = self.env.reset(seed)
         steps = 0
         action = self.act(state)
         r_per_step = []
@@ -149,7 +151,7 @@ class LinearSarsaAgent:
             self.updateQ(state, action, reward, next_state, next_action, done)
 
             if done:
-                next_state, _ = self.env.reset()
+                next_state, _ = self.env.reset(seed)
                 next_action = self.act(next_state)
                 r_per_eps.append(ep_reward_sum)
                 ep_reward_sum = 0
